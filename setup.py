@@ -45,6 +45,14 @@ setuptools.setup(
     version=version,
     packages=setuptools.find_packages(exclude=["tests"]),
     python_requires=">=3.8",
+    install_requires=[
+        "numpy",
+        "pandas",
+        "scikit-learn>=0.24.0",
+        "matplotlib",
+        "seaborn",
+        "configspace>=0.6.1",
+    ],
     extras_require=extras_require,
     platforms=["Linux"],
     classifiers=[

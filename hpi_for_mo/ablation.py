@@ -5,7 +5,7 @@ import copy
 
 from sklearn.metrics import mean_squared_error
 
-from Data_preparation import normalize_ablation
+from .Data_preparation import normalize_ablation
 
 
 def train_model(group, df, objective):

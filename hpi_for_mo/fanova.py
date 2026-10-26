@@ -1,56 +1,64 @@
+import numpy as np
 import pandas as pd
-
-from deepcave.evaluators.epm.fanova_forest import FanovaForest
-from deepcave.evaluators.fanova import fANOVA
-from deepcave.runs import AbstractRun
+from sklearn.ensemble import RandomForestRegressor
 
 
-class fANOVAWeighted(fANOVA):
+def compute_weighted_fanova(X, y_objectives, weighting, hp_names, n_trees=100):
+    """Compute fANOVA importances on weighted scalarized objective.
+
+    Returns {hp_name: (importance, variance)}.
     """
-    Calculate and provide midpoints and sizes from the forest's split values in order to get the marginals.
-    Overriden to train the random forest with an arbitrary weighting of the objectives.
-    """
+    y = sum(w * obj for w, obj in zip(weighting, y_objectives))
+    rf = RandomForestRegressor(n_estimators=n_trees, random_state=0)
+    rf.fit(X, y)
 
-    def __init__(self, run: AbstractRun):
-        if run.configspace is None:
-            raise RuntimeError("The run needs to be initialized.")
-
-        super().__init__(run)
-        self.n_trees = 100
-
-    def train_model(
-            self,
-            group, df, objectives_normed, weighting
-    ) -> None:
-        """
-        Train a FANOVA Forest model where the objectives are weighted by the input weighting.
-        :param group: the runs as group
-        :param df: dataframe containing the encoded data
-        :param objectives_normed: the normalized objective names as a list of strings
-        :param weighting: the weighting as list
-        """
-        X = df[group.configspace.get_hyperparameter_names()].to_numpy()
-        Y = sum(df[obj] * weighting for obj, weighting in zip(objectives_normed, weighting)).to_numpy()
-
-        self._model = FanovaForest(self.cs, n_trees=self.n_trees, seed=0)
-        self._model.train(X, Y)
+    # Partial-dependence variance decomposition
+    var_total = np.var(rf.predict(X))
+    importances = {}
+    for i, hp in enumerate(hp_names):
+        pd_vals = []
+        for val in np.unique(X[:, i]):
+            Xc = X.copy()
+            Xc[:, i] = val
+            pd_vals.append(np.mean(rf.predict(Xc)))
+        imp = np.var(pd_vals) / var_total if var_total > 1e-12 else 0.0
+        # Bootstrap variance estimate from tree disagreement
+        tree_imps = []
+        for tree in rf.estimators_:
+            preds_full = tree.predict(X)
+            vt = np.var(preds_full)
+            if vt < 1e-12:
+                tree_imps.append(0.0)
+                continue
+            pd_tree = []
+            for val in np.unique(X[:, i]):
+                Xc = X.copy()
+                Xc[:, i] = val
+                pd_tree.append(np.mean(tree.predict(Xc)))
+            tree_imps.append(np.var(pd_tree) / vt)
+        importances[hp] = (imp, np.var(tree_imps))
+    return importances
 
 
 def do_weighted_fanova_mo(group, df, objectives_normed, weightings):
     """
     Calculates weighted fAnova for multiple objectives.
-    :param group: the runs as group
+    :param group: the RunGroup
     :param df: dataframe containing the encoded data
     :param objectives_normed: the normalized objective names as a list of strings
     :param weightings: the weightings as list of lists
     :return: the dataframe containing the importances for each hyperparameter per weighting
     """
+    hp_names = group.configspace.get_hyperparameter_names()
+    X = df[hp_names].to_numpy()
+    y_objectives = [df[obj].to_numpy() for obj in objectives_normed]
+
     df_all = pd.DataFrame([])
     for w in weightings:
-        result = fANOVAWeighted(group)
-        result.train_model(group, df, objectives_normed, w)
-        df_res = pd.DataFrame(result.get_importances(hp_names=None)).loc[0:1].T.reset_index()
+        importances = compute_weighted_fanova(X, y_objectives, w, hp_names)
+        rows = [{'hp_name': hp, 'fanova': imp, 'variance': var}
+                for hp, (imp, var) in importances.items()]
+        df_res = pd.DataFrame(rows)
         df_res['weight_for_' + objectives_normed[0]] = w[0]
         df_all = pd.concat([df_all, df_res])
-    df_all = df_all.rename(columns={0: 'fanova', 1:'variance', 'index': 'hp_name'})
     return df_all

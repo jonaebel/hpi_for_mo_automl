@@ -1,4 +1,11 @@
 # Hyperparameter Importance Analysis for Multi-Objective AutoML
+
+> **Fork note:** This fork removes the runtime dependencies on DeepCAVE and SMAC.
+> The library now reads SMAC output files (JSON) directly and uses scikit-learn's
+> `RandomForestRegressor` for fANOVA instead of DeepCAVE's `FanovaForest`.
+> This makes it compatible with any SMAC 2.x version (including >=2.4) and
+> installable without pulling in heavy transitive dependencies (torch, lightning, etc.).
+
 This is the implementation of the paper ["Hyperparameter Importance Analysis for Multi-Objective AutoML"](https://arxiv.org/abs/2405.07640), published at ECAI 2024.
 
 ## Abstract
@@ -11,20 +18,19 @@ cd HPI_for_MO_AutoML
 conda create -n hpi_for_mo python=3.10
 conda activate hpi_for_mo
 
-pip install . -r requirements.txt
+pip install -e .
 ```
 
 ## Run the experiments:
-Choose between time, fair_loss and energy to run the experiments.
+The experiment scripts require additional dependencies (smac, torch, etc.) that are **not** included in the library's requirements. Install them separately before running experiments.
 ```
 python experiments/run_experiments.py --experiment_name time|fair_loss|energy
 ```
 ## Run the analysis and generate the plots:
-To calculate MO-HPI on the results of the experiments, run the following command. The ```in_path``` should lead to the folder containing a multi-objective Smac run, e.g., from the previous step. The ```out_path``` can be any path to where the plots will be saved. The ```objectives``` should be 1-accuracy and one of: time, fair_loss or energy. 
+To calculate MO-HPI on the results of the experiments, run the following command. The ```in_path``` should lead to the folder containing a multi-objective SMAC run, e.g., from the previous step. The ```out_path``` can be any path to where the plots will be saved. The ```objectives``` should be 1-accuracy and one of: time, fair_loss or energy. 
 
 ```
-pip install deepcave==1.2.1
-python hpi_for_mo/main.py --in_path path_to_run --out_path path_to_save_plots --objectives 1-accuracy time|fair_loss|energy
+python -m hpi_for_mo.main --in_path path_to_run --out_path path_to_save_plots --objectives 1-accuracy time|fair_loss|energy
 ```
 
 ## Funding

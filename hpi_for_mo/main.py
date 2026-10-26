@@ -1,14 +1,15 @@
 import math
+import os
 from argparse import ArgumentParser
 
 import numpy as np
 from matplotlib import pyplot as plt
 import seaborn as sns
 
-from Data_preparation import *
-from ablation import do_weighted_ablation_mo
-from fanova import do_weighted_fanova_mo
-from weighting import get_weightings, is_pareto_efficient
+from .Data_preparation import read_runs, encode_and_normalize
+from .ablation import do_weighted_ablation_mo
+from .fanova import do_weighted_fanova_mo
+from .weighting import get_weightings, is_pareto_efficient
 
 
 def plot(df_fanova, df_ablated, objectives_normed, out_path, df, hps, default):
