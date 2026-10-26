@@ -5,6 +5,24 @@
 > `RandomForestRegressor` for fANOVA instead of DeepCAVE's `FanovaForest`.
 > This makes it compatible with any SMAC 2.x version (including >=2.4) and
 > installable without pulling in heavy transitive dependencies (torch, lightning, etc.).
+>
+> **Install this fork:** `pip install git+https://github.com/YOUR_USERNAME/hpi_for_mo_automl.git@feat/updating-for-SMAC`
+>
+> **Quick usage:**
+> ```python
+> from hpi_for_mo.Data_preparation import read_runs, encode_and_normalize
+> from hpi_for_mo.weighting import get_weightings
+> from hpi_for_mo.fanova import do_weighted_fanova_mo
+> from hpi_for_mo.ablation import do_weighted_ablation_mo
+>
+> group = read_runs("path/to/smac_output")
+> objectives = group.get_objectives()
+> df = encode_and_normalize(group, objectives)
+> objectives_normed = [o.name + "_normed" for o in objectives]
+> weightings = get_weightings(objectives_normed, df)
+> df_fanova = do_weighted_fanova_mo(group, df, objectives_normed, weightings)
+> df_ablation, default = do_weighted_ablation_mo(group, df, objectives_normed, weightings)
+> ```
 
 This is the implementation of the paper ["Hyperparameter Importance Analysis for Multi-Objective AutoML"](https://arxiv.org/abs/2405.07640), published at ECAI 2024.
 
