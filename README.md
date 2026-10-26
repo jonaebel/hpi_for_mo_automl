@@ -6,7 +6,7 @@
 > This makes it compatible with any SMAC 2.x version (including >=2.4) and
 > installable without pulling in heavy transitive dependencies (torch, lightning, etc.).
 >
-> **Install this fork:** `pip install git+https://github.com/YOUR_USERNAME/hpi_for_mo_automl.git@feat/updating-for-SMAC`
+> **Install this fork:** `pip install git+https://github.com/jonaebel/hpi_for_mo_automl.git@feat/updating-for-SMAC`
 >
 > **Quick usage:**
 > ```python
