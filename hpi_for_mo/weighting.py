@@ -14,7 +14,7 @@ def get_weightings(objectives_normed, df):
     def _safe_normalize(values):
         s = values.sum()
         if s < 1e-12:
-            # Point dominates all objectives — assign equal weight
+            # Point dominates all objectives, assign equal weight
             return values * 0.0 + 1.0 / len(values)
         return values / s
 
