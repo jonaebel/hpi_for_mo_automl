@@ -9,7 +9,16 @@ def get_weightings(objectives_normed, df):
     :return: the weightings as a list of lists
     """
     optimized = is_pareto_efficient(df[objectives_normed].to_numpy())
-    return df[optimized][objectives_normed].T.apply(lambda values: values / values.sum()).T.to_numpy()
+    pareto_df = df[optimized][objectives_normed]
+
+    def _safe_normalize(values):
+        s = values.sum()
+        if s < 1e-12:
+            # Point dominates all objectives — assign equal weight
+            return values * 0.0 + 1.0 / len(values)
+        return values / s
+
+    return pareto_df.T.apply(_safe_normalize).T.to_numpy()
 
 
 def is_pareto_efficient(costs):
