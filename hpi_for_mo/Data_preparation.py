@@ -61,7 +61,14 @@ def _is_smac_run(path):
 def _read_single_run(run_path):
     """Read a single SMAC run directory and return (cs, configs, data, objective_names)."""
     with open(os.path.join(run_path, 'configspace.json'), 'r') as f:
-        cs = cs_read_json(f.read())
+        cs_raw = json.load(f)
+
+    # SMAC 2.4 writes 'default', ConfigSpace 0.6.1 expects 'default_value'
+    for hp in cs_raw.get("hyperparameters", []):
+        if "default" in hp and "default_value" not in hp:
+            hp["default_value"] = hp.pop("default")
+
+    cs = cs_read_json(json.dumps(cs_raw))
 
     with open(os.path.join(run_path, 'runhistory.json'), 'r') as f:
         rh = json.load(f)
