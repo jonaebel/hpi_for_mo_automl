@@ -187,8 +187,11 @@ def normalize(values, obj):
     :return: the normalized values
     """
     global norm_dict
-    norm_dict[obj] = (values.min(), values.max())
-    return (values - norm_dict[obj][0]) / (norm_dict[obj][1] - norm_dict[obj][0])
+    vmin, vmax = values.min(), values.max()
+    norm_dict[obj] = (vmin, vmax)
+    if vmax - vmin < 1e-12:
+        return values * 0.0
+    return (values - vmin) / (vmax - vmin)
 
 
 def normalize_ablation(values, obj):
@@ -199,7 +202,11 @@ def normalize_ablation(values, obj):
     :return: the normalized values
     """
     global norm_dict
-    normed = (values - norm_dict[obj][0]) / (norm_dict[obj][1] - norm_dict[obj][0])
+    vmin, vmax = norm_dict[obj]
+    if vmax - vmin < 1e-12:
+        normed = values * 0.0
+    else:
+        normed = (values - vmin) / (vmax - vmin)
     normed[normed < 0] = 0
     return normed
 
@@ -214,6 +221,15 @@ def encode_and_normalize(group, objectives):
     hp_names = group.configspace.get_hyperparameter_names()
     obj_names = [o.name for o in objectives]
 
+    # Map selected objective names to their index in the full cost vector
+    all_obj_names = group.objective_names
+    obj_indices = []
+    for name in obj_names:
+        if name in all_obj_names:
+            obj_indices.append(all_obj_names.index(name))
+        else:
+            obj_indices.append(None)
+
     rows = []
     for entry in group.data:
         if entry.get('status') != 1:
@@ -227,8 +243,11 @@ def encode_and_normalize(group, objectives):
             cost = [cost]
 
         row = dict(zip(hp_names, encoded))
-        for obj_name, c in zip(obj_names, cost):
-            row[obj_name] = c
+        for obj_name, idx in zip(obj_names, obj_indices):
+            if idx is not None and idx < len(cost):
+                row[obj_name] = cost[idx]
+            else:
+                row[obj_name] = np.nan
         row['config_id'] = config_id
         rows.append(row)
 

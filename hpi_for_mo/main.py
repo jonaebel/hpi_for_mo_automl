@@ -25,11 +25,8 @@ def plot(df_fanova, df_ablated, objectives_normed, out_path, df, hps, default):
     os.makedirs(out_path, exist_ok=True)
 
     # create color mapping
-    hps = hps + ['Default', 'initial_lr']
-    hps = sorted(hps)
-    if not any('energy' in obj for obj in objectives_normed):
-        hps.remove('learning_rate_init')
-    colors = {label: color for label, color in zip(hps, sns.color_palette('colorblind', n_colors=len(hps)))}
+    all_labels = sorted(set(hps + ['Default']))
+    colors = {label: color for label, color in zip(all_labels, sns.color_palette('colorblind', n_colors=len(all_labels)))}
 
     fig, axes = plt.subplots(1, 3, figsize=(12, 3.5))
 
@@ -46,7 +43,6 @@ def plot(df_fanova, df_ablated, objectives_normed, out_path, df, hps, default):
     ax1.set_title('Pareto Front')
 
     # fanova
-    df_fanova['hp_name'] = df_fanova['hp_name'].str.replace('learning_rate_init', 'initial_lr')
     weight = [col for col in df_fanova.columns if col.startswith('weight_')][0]
     df_fanova.to_csv(out_path + '/df_fanova.csv', index=False)
     df_fanova = df_fanova.reindex(sorted(df_fanova.columns), axis=1)
@@ -58,15 +54,16 @@ def plot(df_fanova, df_ablated, objectives_normed, out_path, df, hps, default):
         to_plot = group_data.sort_values(by=weight)
         ax2.fill_between(to_plot[weight], to_plot['fanova'] - to_plot['variance'],
                          to_plot['fanova'] + to_plot['variance'], alpha=0.2, color=colors[group_id])
-    ax2.set_xlabel('Weight for Error')
+    obj0_label = objectives_normed[0].split('_normed')[0]
+    obj1_label = objectives_normed[1].split('_normed')[0]
+    ax2.set_xlabel(f'Weight for {obj0_label}')
     ax2.set_ylabel('Importance')
     ax2.set_xlim(0, 1)
     ax2.set_ylim(0, df_fanova['fanova'].max())
     ax2.set_title('MO-fANOVA')
 
-    #no pareto x axis
     ax2.set_xticks([0, 0.2, 0.4, 0.6, 0.8, 1.0],
-                   [objectives_normed[1].split('_normed')[0], '0.2', '0.4', '0.6', '0.8', 'Error'])
+                   [obj1_label, '0.2', '0.4', '0.6', '0.8', obj0_label])
 
     # pareto x axis
     # x_ticks = sorted(list(df_fanova[weight].apply(lambda x: round(x*100)/100).unique()))
@@ -75,7 +72,6 @@ def plot(df_fanova, df_ablated, objectives_normed, out_path, df, hps, default):
     ax2.get_legend().remove()
 
     # ablation
-    df_ablated['hp_name'] = df_ablated['hp_name'].str.replace('learning_rate_init', 'initial_lr')
     weight = [col for col in df_ablated.columns if col.startswith('weight_')][0]
     df_ablated.to_csv(out_path + '/df_ablation.csv', index=False)
     df_ablated = df_ablated.reindex(sorted(df_ablated.columns), axis=1)
@@ -86,15 +82,16 @@ def plot(df_fanova, df_ablated, objectives_normed, out_path, df, hps, default):
     grouped_df = df_ablated.groupby([weight, 'hp_name'])
     grouped_df = grouped_df['accuracy'].sum().unstack(fill_value=0)
     grouped_df.plot(kind='area', stacked=True, color=[v for k, v in colors.items() if k in grouped_df.columns], ax=ax3)
-    ax3.set_xlabel('Weight for Error')
+    ax3.set_xlabel(f'Weight for {obj0_label}')
     ax3.set_ylabel('Sum of Weighted\nNormalized Objectives')
-    ax3.set_ylim(
-        math.floor(10 * (1 - (df_ablated[df_ablated['hp_name'] == 'Default']['new_performance'].max() + 0.01))) / 10, 1)
+    default_perf = df_ablated[df_ablated['hp_name'] == 'Default']['new_performance']
+    if not default_perf.empty:
+        ax3.set_ylim(
+            math.floor(10 * (1 - (default_perf.max() + 0.01))) / 10, 1)
     ax3.set_title('MO-Ablation Path Analysis')
 
-    #no pareto x axis
     ax3.set_xticks([0, 0.2, 0.4, 0.6, 0.8, 1.0],
-                   [objectives_normed[1].split('_normed')[0], '0.2', '0.4', '0.6', '0.8', 'Error'])
+                   [obj1_label, '0.2', '0.4', '0.6', '0.8', obj0_label])
 
     # pareto x axis
     # x_ticks = sorted(list(df_ablated[weight].apply(lambda x: round(x * 100) / 100).unique()))
